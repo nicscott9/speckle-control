@@ -32,7 +32,7 @@ global ANDOR_CFG CAMSTATUS TELEMETRY SPECKLE_DIR SCOPE ANDOR_ROI CAM ANDOR_ARM
    set state(0) "Off"
    set state(1) "On"
    set TELEMETRY(speckle.andor.head) "Andor iXon Emccd"
-   if { $ANDOR_CFG($arm,EMCCDGain) > 0 } {
+   if { $ANDOR_CFG($CAM,OutputAmplifier) == 0 } {
      set TELEMETRY(speckle.andor.amplifier) "Electron Multiplying"
      set TELEMETRY(speckle.andor.emccdmode) "On"
    } else {
@@ -43,22 +43,22 @@ global ANDOR_CFG CAMSTATUS TELEMETRY SPECKLE_DIR SCOPE ANDOR_ROI CAM ANDOR_ARM
    set TELEMETRY(speckle.andor.acquisition_mode) "Single scan"
    if { $TELEMETRY(speckle.andor.numberkinetics) > 1}  { set TELEMETRY(speckle.andor.acquisition_mode) "Kinetics mode" }
    set TELEMETRY(speckle.andor.int_time) $ANDOR_CFG($arm,ExposureTime)
-   set TELEMETRY(speckle.andor.kinetic_time) $ANDOR_CFG($arm,KineticCycleTime)
-   set TELEMETRY(speckle.andor.exptime) $ANDOR_CFG($arm,ExposureTime)
+   set TELEMETRY(speckle.andor.kinetic_time) $ANDOR_CFG($CAM,TKinetics)
+   set TELEMETRY(speckle.andor.exptime) $ANDOR_CFG($CAM,TExposure)
    set TELEMETRY(speckle.andor.numaccum) $ANDOR_CFG($arm,NumberAccumulations)
    if { $TELEMETRY(speckle.andor.numaccum) > 1}  { set TELEMETRY(speckle.andor.acquisition_mode) "Kinetics + Accumulate mode" }
-   set TELEMETRY(speckle.andor.accumulationcycle) $ANDOR_CFG($arm,AccumulationCycleTime)
+   set TELEMETRY(speckle.andor.accumulationcycle) $ANDOR_CFG($CAM,TAccumulate)
    set TELEMETRY(speckle.andor.read_mode) "Frame transfer"
    set TELEMETRY(speckle.andor.fullframe) "1,1024,1,1024"
    set TELEMETRY(speckle.andor.frametransfer) $state($ANDOR_CFG($arm,FrameTransferMode))
    set TELEMETRY(speckle.andor.biasclamp) $state($ANDOR_CFG($arm,BaselineClamp))
-   set TELEMETRY(speckle.andor.hbin) $ANDOR_CFG($arm,hbin)
+   set TELEMETRY(speckle.andor.hbin) $ANDOR_CFG(binning)
    set TELEMETRY(speckle.andor.roi) "$ANDOR_ROI(xs),$ANDOR_ROI(xe),$ANDOR_ROI(ys),$ANDOR_ROI(ye)"
-   set TELEMETRY(speckle.andor.vbin) $ANDOR_CFG($arm,vbin)
+   set TELEMETRY(speckle.andor.vbin) $ANDOR_CFG(binning)
    set TELEMETRY(speckle.andor.datatype) $ANDOR_CFG($arm,fitsbits)
    set dll [string range [file tail [glob $SPECKLE_DIR/lib/libUSBI2C.so.*.0]] 13 end]
    set TELEMETRY(speckle.andor.sw_version) $dll
-   set TELEMETRY(speckle.andor.exposure_total) [expr $ANDOR_CFG($arm,NumberKinetics) * $ANDOR_CFG($arm,ExposureTime) * $ANDOR_CFG($arm,NumberAccumulations)]
+   set TELEMETRY(speckle.andor.exposure_total) [expr $ANDOR_CFG($arm,NumberKinetics) * $ANDOR_CFG($CAM,TExposure) * $ANDOR_CFG($arm,NumberAccumulations)]
    set TELEMETRY(speckle.andor.em_gain) $ANDOR_CFG($arm,EMCCDGain)
    set TELEMETRY(speckle.andor.preamp_gain) [expr $ANDOR_CFG($arm,PreAmpGain) +1]
    set TELEMETRY(speckle.andor.serial_number) $ANDOR_CFG($CAM,SerialNumber) 
@@ -79,6 +79,11 @@ global ANDOR_CFG CAMSTATUS TELEMETRY SPECKLE_DIR SCOPE ANDOR_ROI CAM ANDOR_ARM
    set TELEMETRY(speckle.scope.site) $SCOPE(telescope)
    set TELEMETRY(speckle.scope.ProgID) $SCOPE(ProgID)
 }
+
+proc getPropDate { n } {
+  return "[clock format [expr [clock seconds] + 24*3600*31*$n] -format %Y-%m-%d -gmt 1]"
+}
+
 
 ## Documented proc \c showTelemetry .
 #
@@ -112,6 +117,7 @@ set ANDOR_CFG(red,hbin) 1
 set ANDOR_CFG(red,vbin) 1
 set ANDOR_CFG(blue,hbin) 1
 set ANDOR_CFG(blue,vbin) 1
+set ANDOR_CFG(binning) 1
 set ANDOR_ROI(xs) 1
 set ANDOR_ROI(xe) 1024
 set ANDOR_ROI(ys) 1

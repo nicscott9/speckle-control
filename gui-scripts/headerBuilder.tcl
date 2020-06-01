@@ -101,15 +101,25 @@ global HEADERS PDEBUG
 #
 proc fillheader { args } {
 global TELEMETRY PDEBUG HEADERS FITSKEY FITSTXT SEQNUM SCOPE
-global FROMSTARTEXP CACHETELEMETRY ANDOR_ARM
+global FROMSTARTEXP CACHETELEMETRY ANDOR_ARM env
   set fhead ""
-  speckleTelemetryUpdate
+  set gottelem "no"
+  catch {
+     speckleTelemetryUpdate
+     set gottelem yes
+  }
+  if { $gottelem == "no" } {
+        debuglog "****************** NO TELEMETRY AVAILABLE ***********************"
+        debuglog "****************** PLEASE CHECK THE VII IS RUNNING  *************"
+        debuglog "****************** AND MAX CONNECTIONS IS >5 ********************"
+        simGeminiTelemetry
+  }
   updateAndorTelemetry $ANDOR_ARM
   set type unknown
-  if { $SCOPE(telescope) == "GEMINI" } {set type gemini-speckle}
-  if { $SCOPE(telescope) == "WIYN" }   {set type wiyn-speckle}
+  if { $env(TELESCOPE) == "GEMINI" } {set type gemini-speckle}
+  if { $env(TELESCOPE) == "WIYN" }   {set type wiyn-speckle}
   showTelemetry
-  set fhead "[fitshdrrecord HDR_REV string {3.00 18-Feb-2008} Header-Rev ]\n" 
+  set fhead "[fitshdrrecord HDR_REV string {4.00 10-Feb-2020q} Header-Rev ]\n" 
   foreach i $HEADERS($type) {
      if { $PDEBUG > 1 } {debuglog "processing $i"}
      if { [info exists FITSKEY($i)] } {
@@ -425,6 +435,7 @@ global TELEMETRY SPECKLE_DIR SPKTELEM env
        source $SPECKLE_DIR/gui-scripts/redisquery.tcl
        redisConnect
        redisUpdate
+       after 5000 redisPrint
        puts stdout "Connected to REDIS server"
    }
    if { $method == "mpg" } {
@@ -531,18 +542,19 @@ if { $env(TELESCOPE) == "WIYN" } {
     set SCOPE(instrument) "Zorro"
   }
   proc redisquery { } { }
+  proc redisUpdate { } { }
 }
 
 
 source $SPECKLE_DIR/gui-scripts/headerSpecials.tcl
-source $SPECKLE_DIR/gui-scripts/astrometry.tcl
+source $SPECKLE_DIR/gui-scripts/astrometryv2.tcl
 source $SPECKLE_DIR/gui-scripts/andorTelemetry.tcl
 
 loadstreamdefs $SPECKLE_DIR/gui-scripts/telem-[string tolower $env(TELESCOPE)].conf
-loadhdrdefs $SPECKLE_DIR/gui-scripts/headers.conf
+loadhdrdefs $SPECKLE_DIR/gui-scripts/headers.conf.[string tolower $env(TELESCOPE)]
 if { $env(TELESCOPE) == "WIYN" } {
   source $SPECKLE_DIR/gui-scripts/simwiyntlm.tcl
-  initWIYNTelemetry mpg
+  initWIYNTelemetry redis
 } else {
   source $SPECKLE_DIR/gui-scripts/gemini_telemetry.tcl
   if { $env(GEMINISITE) == "south" } {
@@ -551,8 +563,6 @@ if { $env(TELESCOPE) == "WIYN" } {
      geminiConnect north
   }
 }
-
-proc redisUpdate { } { }
 
 after 5000 cachetelemetry
 
